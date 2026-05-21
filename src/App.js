@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
-const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Initialize Supabase
+const supabaseUrl = 'https://kazimfubgossxmbbswo.supabase.co';
+const supabaseKey = 'sb_publishable_coNHa3hdHVCi-sXPMn08-w_s1P9Z8WN';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Drinks menu
 const DRINKS = [
@@ -46,68 +47,90 @@ const DRINKS = [
     id: 'boat-candy',
     name: 'Boat with candy',
     price: 20,
-    emoji: '⛵️',
+    emoji: '🚤',
     tagline: 'Fun & Sweet',
   },
   {
     id: 'game',
     name: 'Game',
     price: 20,
-    emoji: '🎲',
+    emoji: '🎮',
     tagline: 'Play & Win',
   },
 ];
 
 export default function App() {
-  const [selectedDrink, setSelectedDrink] = useState(null);
-  const [quantity, setQuantity] = useState(1);
+  const [cart, setCart] = useState({}); // { drinkId: quantity }
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Calculate total
-  const total = selectedDrink ? selectedDrink.price * quantity : 0;
-
-  // Select drink
-  const handleSelectDrink = (drink) => {
-    setSelectedDrink(drink);
-    setQuantity(1);
+  // Add item to cart
+  const handleAddToCart = (drink) => {
+    setCart((prev) => ({
+      ...prev,
+      [drink.id]: (prev[drink.id] || 0) + 1,
+    }));
     setStatus(null);
   };
 
-  // Increase quantity
-  const handleIncreaseQty = () => {
-    setQuantity(quantity + 1);
+  // Remove item from cart
+  const handleRemoveFromCart = (drinkId) => {
+    setCart((prev) => {
+      const newCart = { ...prev };
+      newCart[drinkId]--;
+      if (newCart[drinkId] <= 0) {
+        delete newCart[drinkId];
+      }
+      return newCart;
+    });
   };
 
-  // Decrease quantity
-  const handleDecreaseQty = () => {
-    if (quantity > 1) {
-      setQuantity(quantity - 1);
-    }
+  // Clear entire cart
+  const handleClearCart = () => {
+    setCart({});
   };
 
-  // Create order in Supabase
-  const createOrderInSupabase = async () => {
-    const orderId = `SS-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+  // Calculate total
+  const total = Object.entries(cart).reduce((sum, [drinkId, qty]) => {
+    const drink = DRINKS.find((d) => d.id === drinkId);
+    return sum + (drink ? drink.price * qty : 0);
+  }, 0);
 
-    const orderData = {
-      order_id: orderId,
-      drink_id: selectedDrink.id,
-      drink_name: selectedDrink.name,
-      quantity: quantity,
-      unit_price: selectedDrink.price,
-      total_amount: total,
-      status: 'pending',
-      created_at: new Date().toISOString(),
+  // Get cart items with details
+  const cartItems = Object.entries(cart).map(([drinkId, quantity]) => {
+    const drink = DRINKS.find((d) => d.id === drinkId);
+    return {
+      ...drink,
+      quantity,
+      subtotal: drink.price * quantity,
     };
+  });
+
+  // Create orders in Supabase
+  const createOrdersInSupabase = async () => {
+    const orderId = `SS-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+    const orders = [];
+
+    // Create an order row for each item in cart
+    for (const item of cartItems) {
+      orders.push({
+        order_id: orderId,
+        drink_id: item.id,
+        drink_name: item.name,
+        quantity: item.quantity,
+        unit_price: item.price,
+        total_amount: item.subtotal,
+        status: 'pending',
+        created_at: new Date().toISOString(),
+      });
+    }
 
     try {
       if (!supabaseUrl.includes('YOUR_SUPABASE')) {
-        const { error } = await supabase.from('orders').insert([orderData]);
+        const { error } = await supabase.from('orders').insert(orders);
 
         if (error) {
           console.warn('Supabase error:', error);
-          // Continue anyway with order ID
         }
       } else {
         console.log('⚠️ Supabase not configured. Order ID:', orderId);
@@ -115,25 +138,25 @@ export default function App() {
 
       return orderId;
     } catch (error) {
-      console.error('Error creating order:', error);
-      // Still return order ID
+      console.error('Error creating orders:', error);
       return orderId;
     }
   };
 
   // Generate UPI link
   const generateUPILink = (orderId, amount) => {
-    return `upi://pay?appid=com.infra.uboinpci&tr=${orderId}&mc=&pa=touchmission@uboi&pn=TOUCH&tn=${encodeURIComponent(`${selectedDrink.name} x${quantity}`)}&am=${amount}&cu=INR`;
+    const itemNames = cartItems.map((item) => `${item.name} x${item.quantity}`).join(', ');
+    return `upi://pay?appid=com.infra.uboinpci&tr=${orderId}&mc=&pa=touchmission@uboi&pn=TOUCH&tn=${encodeURIComponent(itemNames)}&am=${amount}&cu=INR`;
   };
 
   // Handle payment
   const handlePayment = async () => {
-    if (!selectedDrink) return;
+    if (Object.keys(cart).length === 0) return;
 
     setLoading(true);
     try {
-      // Create order in Supabase
-      const orderId = await createOrderInSupabase();
+      // Create orders in Supabase
+      const orderId = await createOrdersInSupabase();
 
       if (!orderId) {
         throw new Error('Failed to create order');
@@ -189,14 +212,14 @@ export default function App() {
           </div>
         )}
 
-        {/* Drinks Grid */}
+        {/* Items Grid */}
         <div className="grid grid-cols-2 gap-4 sm:gap-6 mb-8">
           {DRINKS.map((drink) => (
             <button
               key={drink.id}
-              onClick={() => handleSelectDrink(drink)}
-              className={`p-5 sm:p-6 rounded-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-2 shadow-lg animate-pop-in ${
-                selectedDrink?.id === drink.id
+              onClick={() => handleAddToCart(drink)}
+              className={`p-5 sm:p-6 rounded-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-2 shadow-lg animate-pop-in relative ${
+                cart[drink.id]
                   ? 'bg-gradient-to-br from-pink-100 to-yellow-50 border-4 border-pink-500 scale-105 shadow-2xl'
                   : 'bg-white border-4 border-transparent hover:border-pink-300'
               }`}
@@ -204,6 +227,13 @@ export default function App() {
                 animationDelay: `${DRINKS.indexOf(drink) * 0.1}s`,
               }}
             >
+              {/* Quantity Badge */}
+              {cart[drink.id] && (
+                <div className="absolute -top-3 -right-3 bg-pink-500 text-white rounded-full w-8 h-8 flex items-center justify-center font-black text-lg">
+                  {cart[drink.id]}
+                </div>
+              )}
+
               <div className="text-5xl sm:text-6xl mb-3 block">{drink.emoji}</div>
               <div className="font-black text-pink-600 text-lg sm:text-xl leading-tight mb-1">
                 {drink.name}
@@ -218,55 +248,55 @@ export default function App() {
           ))}
         </div>
 
-        {/* Quantity Section */}
-        {selectedDrink && (
-          <div className="bg-white rounded-2xl p-6 sm:p-8 mb-6 border-4 border-dashed border-pink-500 shadow-lg animate-slide-up">
-            <label className="block text-xs sm:text-sm font-black text-teal-700 uppercase tracking-widest mb-6">
-              📝 How Many?
-            </label>
-            <div className="flex items-center justify-center gap-6 sm:gap-8">
+        {/* Cart Section */}
+        {Object.keys(cart).length > 0 && (
+          <div className="bg-white rounded-2xl p-6 sm:p-8 mb-6 border-4 border-yellow-400 shadow-lg animate-slide-up">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-black text-pink-600">🛒 Your Cart</h2>
               <button
-                onClick={handleDecreaseQty}
-                className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-pink-500 to-red-500 text-white font-black text-2xl sm:text-3xl hover:scale-110 active:scale-95 transition-all shadow-lg"
+                onClick={handleClearCart}
+                className="text-sm font-bold text-red-600 hover:text-red-800 underline"
               >
-                −
-              </button>
-              <div className="text-5xl sm:text-6xl font-black text-pink-600 min-w-20 text-center">
-                {quantity}
-              </div>
-              <button
-                onClick={handleIncreaseQty}
-                className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-pink-500 to-red-500 text-white font-black text-2xl sm:text-3xl hover:scale-110 active:scale-95 transition-all shadow-lg"
-              >
-                +
+                Clear Cart
               </button>
             </div>
-          </div>
-        )}
 
-        {/* Summary Section */}
-        {selectedDrink && (
-          <div className="bg-white rounded-2xl p-6 sm:p-8 mb-6 border-4 border-yellow-400 shadow-lg animate-slide-up">
-            <div className="space-y-3 sm:space-y-4">
-              <div className="flex justify-between items-center text-sm sm:text-base">
-                <span className="font-bold text-teal-700">Drink</span>
-                <span className="font-bold text-pink-600">{selectedDrink.name}</span>
-              </div>
-              <div className="flex justify-between items-center text-sm sm:text-base">
-                <span className="font-bold text-teal-700">Quantity</span>
-                <span className="font-bold text-pink-600">{quantity}x</span>
-              </div>
-              <div className="flex justify-between items-center text-sm sm:text-base">
-                <span className="font-bold text-teal-700">Unit Price</span>
-                <span className="font-bold text-pink-600">₹{selectedDrink.price}</span>
-              </div>
-              <div className="border-t-4 border-dashed border-pink-500 pt-4">
-                <div className="flex justify-between items-center">
-                  <span className="font-bold text-teal-700">Subtotal</span>
-                  <span className="text-2xl sm:text-3xl font-black text-red-500">
-                    ₹{total}
-                  </span>
+            {/* Cart Items */}
+            <div className="space-y-3 mb-6">
+              {cartItems.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex justify-between items-center pb-3 border-b border-gray-200"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-3xl">{item.emoji}</span>
+                    <div>
+                      <div className="font-bold text-pink-600">{item.name}</div>
+                      <div className="text-sm text-gray-600">
+                        ₹{item.price} × {item.quantity}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="font-bold text-teal-600">₹{item.subtotal}</div>
+                    <button
+                      onClick={() => handleRemoveFromCart(item.id)}
+                      className="w-8 h-8 bg-red-500 text-white rounded-full hover:bg-red-600 font-bold"
+                    >
+                      −
+                    </button>
+                  </div>
                 </div>
+              ))}
+            </div>
+
+            {/* Total */}
+            <div className="border-t-4 border-dashed border-pink-500 pt-4">
+              <div className="flex justify-between items-center">
+                <span className="font-black text-lg text-teal-700">TOTAL</span>
+                <span className="text-3xl sm:text-4xl font-black text-red-500">
+                  ₹{total}
+                </span>
               </div>
             </div>
           </div>
@@ -275,15 +305,15 @@ export default function App() {
         {/* Pay Button */}
         <button
           onClick={handlePayment}
-          disabled={!selectedDrink || loading}
+          disabled={Object.keys(cart).length === 0 || loading}
           className={`w-full py-4 sm:py-5 px-6 rounded-2xl font-black text-lg sm:text-xl uppercase tracking-wider transition-all duration-300 mb-4 ${
-            selectedDrink && !loading
+            Object.keys(cart).length > 0 && !loading
               ? 'bg-gradient-to-br from-pink-500 to-red-500 text-white hover:-translate-y-1 hover:shadow-2xl active:translate-y-0 shadow-xl'
               : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-50'
           }`}
         >
-          {!selectedDrink
-            ? 'Select a drink to continue'
+          {Object.keys(cart).length === 0
+            ? 'Add items to continue'
             : loading
               ? '⏳ Processing...'
               : `💳 PAY ₹${total}`}
