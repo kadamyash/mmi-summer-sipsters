@@ -145,7 +145,7 @@ export default function App() {
 
   // Generate UPI link
   const generateUPILink = (orderId, amount) => {
-    return `upi://pay?appid=com.infra.uboinpci&tr=${orderId}&mc=&pa=8879063110@yescred&pn=TOUCH&tn=Order&am=${amount}&cu=INR`;
+    return `upi://pay?pa=8879063110@yescred&pn=TOUCH&am=${amount}&tr=${orderId}&tn=Order&cu=INR`;
   };
 
   // Handle payment
