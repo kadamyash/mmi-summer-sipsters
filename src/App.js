@@ -8,32 +8,53 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 // Drinks menu
 const DRINKS = [
   {
-    id: 'aam-panna',
-    name: 'Aam Panna',
-    price: 20,
-    emoji: '🥭',
-    tagline: 'Tangy, Refreshing',
-  },
-  {
     id: 'solkadhi',
     name: 'Solkadhi',
-    price: 20,
+    price: 30,
     emoji: '🥥',
     tagline: 'Coastal Coolness',
   },
   {
+    id: 'aam-panna',
+    name: 'Aam Panna',
+    price: 30,
+    emoji: '🥭',
+    tagline: 'Tangy, Refreshing',
+  },
+  {
     id: 'boba-pineapple',
     name: 'Boba Tea (Pineapple)',
-    price: 40,
+    price: 50,
     emoji: '🍍',
     tagline: 'Tropical Vibes',
   },
   {
     id: 'boba-coffee',
     name: 'Boba Tea (Coffee)',
-    price: 40,
+    price: 50,
     emoji: '☕',
     tagline: 'Brewed Fresh',
+  },
+  {
+    id: 'cupcakes',
+    name: 'Cup cakes',
+    price: 20,
+    emoji: '🧁',
+    tagline: 'Sweet Treats',
+  },
+  {
+    id: 'boat-candy',
+    name: 'Boat with candy',
+    price: 20,
+    emoji: '⛵️',
+    tagline: 'Fun & Sweet',
+  },
+  {
+    id: 'game',
+    name: 'Game',
+    price: 20,
+    emoji: '🎲',
+    tagline: 'Play & Win',
   },
 ];
 
