@@ -58,14 +58,6 @@ const DRINKS = [
   },
 ];
 
-// UPI Configuration
-const UPI_CONFIG = {
-  pa: 'touchmission@uboi',
-  pn: 'TOUCH',
-  cu: 'INR',
-  appid: 'com.infra.uboinpci',
-};
-
 export default function App() {
   const [selectedDrink, setSelectedDrink] = useState(null);
   const [quantity, setQuantity] = useState(1);
