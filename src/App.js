@@ -145,8 +145,7 @@ export default function App() {
 
   // Generate UPI link
   const generateUPILink = (orderId, amount) => {
-    const itemNames = cartItems.map((item) => `${item.name} x${item.quantity}`).join(', ');
-    return `upi://pay?appid=com.infra.uboinpci&tr=${orderId}&mc=&pa=touchmission@uboi&pn=TOUCH&tn=${encodeURIComponent(itemNames)}&am=${amount}&cu=INR`;
+    return `upi://pay?appid=com.infra.uboinpci&tr=${orderId}&mc=&pa=8879063110@yescred&pn=TOUCH&tn=Order&am=${amount}&cu=INR`;
   };
 
   // Handle payment
