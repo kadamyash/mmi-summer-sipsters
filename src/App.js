@@ -5,15 +5,13 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
 const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
-console.log('Supabase URL:', process.env.REACT_APP_SUPABASE_URL);
-console.log('Supabase Key:', process.env.REACT_APP_SUPABASE_ANON_KEY);
 
 // Drinks menu
 const DRINKS = [
   {
     id: 'solkadhi',
     name: 'Solkadhi',
-    price: 30,
+    price: 20,
     emoji: '🥥',
     tagline: 'Coastal Coolness',
   },
@@ -108,13 +106,15 @@ export default function App() {
   // Clear cart
   const handleClearCart = () => {
     setCart({});
+    setPendingOrderId(null);
     setScreen('menu');
   };
 
   // Show QR
   const handleShowQR = () => {
     if (Object.keys(cart).length === 0) return;
-    setPendingOrderId(`SS-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`);
+    const newOrderId = `SS-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+    setPendingOrderId(newOrderId);
     setScreen('qr');
     setCodeInput('');
     setStatus(null);
